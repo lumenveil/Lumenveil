@@ -1,0 +1,95 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  release:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version from the tag
+        id: version
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ($env:TAG -match '^v(\d+\.\d+\.\d+)$') { $version = $Matches[1] }
+          else { throw "The tag $env:TAG doesn't read v<major>.<minor>.<patch>" }
+          $top = (Select-String -Path CHANGELOG.md -Pattern '^##\s+(\d+\.\d+\.\d+)' | Select-Object -First 1).Matches[0].Groups[1].Value
+          if ($top -ne $version) { throw "The tag says $version, the top entry of CHANGELOG.md $top" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build, test without a GPU, pack
+        shell: powershell
+        run: .\scripts\Build-Release.ps1 -CpuTestsOnly
+
+      - name: Comment check
+        shell: pwsh
+        run: python engine/tools/check_comments.py
+
+      - name: Sign a record of where the files were built
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/Lumenveil-${{ steps.version.outputs.version }}.zip
+            dist/Lumenveil-${{ steps.version.outputs.version }}/version.dll
+            dist/Lumenveil-${{ steps.version.outputs.version }}/CoAVolFog.dll
+            dist/Lumenveil-${{ steps.version.outputs.version }}/Lumenveil/lamp_extract.exe
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $lines = Get-Content CHANGELOG.md
+          $start = -1
+          $end = $lines.Count
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -notmatch '^##\s+(\S+)') { continue }
+            if ($start -ge 0) { $end = $i; break }
+            if ($Matches[1] -eq $env:VERSION) { $start = $i + 1 }
+          }
+          if ($start -lt 0) { throw "CHANGELOG.md has no entry for $env:VERSION" }
+          $repo = $env:GITHUB_REPOSITORY
+          $blob = "https://github.com/$repo/blob/$env:GITHUB_REF_NAME"
+          $paragraphs = New-Object System.Collections.Generic.List[string]
+          $open = $false
+          foreach ($line in $lines[$start..($end - 1)]) {
+            if (-not $line.Trim()) { $open = $false; continue }
+            if ($open -and $line -notmatch '^- ') { $paragraphs[$paragraphs.Count - 1] += ' ' + $line.Trim(); continue }
+            $paragraphs.Add($line.TrimEnd())
+            $open = $true
+          }
+          $body = ($paragraphs -join "`n`n") -replace '\]\((?!https?://|#)([^)]+)\)', "]($blob/`$1)"
+          $notes = @(
+            $body
+            ''
+            '## Install'
+            ''
+            "Close the game, drag everything in ``Lumenveil-$env:VERSION.zip`` into the folder that holds ``Wow.exe``, and double-click ``Lumenveil-Setup.cmd`` once. [INSTALL.md]($blob/docs/INSTALL.md) has the details, and [how to update]($blob/docs/INSTALL.md#updating) from an earlier version."
+            ''
+            '## Checking a download'
+            ''
+            "GitHub Actions built these files from the source at this tag, and GitHub signed a record of the build. With the [GitHub CLI](https://cli.github.com/):"
+            ''
+            '```'
+            "gh attestation verify Lumenveil-$env:VERSION.zip --repo $repo"
+            '```'
+            ''
+            "The same works for ``version.dll``, ``CoAVolFog.dll`` and ``Lumenveil\lamp_extract.exe`` from the zip. Or compare the files with ``SHA256SUMS.txt``. If your antivirus warns about them, see [Antivirus warnings]($blob/docs/TROUBLESHOOTING.md#antivirus-warnings)."
+          )
+          $file = Join-Path $env:RUNNER_TEMP 'notes.md'
+          [IO.File]::WriteAllLines($file, $notes)
+          gh release create $env:GITHUB_REF_NAME "dist/Lumenveil-$env:VERSION.zip" dist/SHA256SUMS.txt `
+            --title "Lumenveil $env:VERSION" --notes-file $file --verify-tag

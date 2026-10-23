@@ -4,6 +4,7 @@ project(lamp_extract C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/VersionResource.cmake)
 
 set(LAMP_EXTRACT_DEPS "" CACHE PATH "Folder holding the libmpq, zlib and bzip2 sources")
 if(NOT EXISTS "${LAMP_EXTRACT_DEPS}/libmpq/libmpq/mpq.h")
@@ -47,6 +48,8 @@ target_include_directories(lamp_extract PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../.
 target_compile_definitions(lamp_extract PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS)
 target_compile_options(lamp_extract PRIVATE /W4 /utf-8)
 target_link_libraries(lamp_extract PRIVATE lx_mpq)
+vf_version_resource(lamp_extract lamp_extract.exe VFT_APP
+    "Lumenveil setup tool: lists the lamps and water of your game from its own data files")
 
 add_executable(relief_pack
     archive_set.cpp

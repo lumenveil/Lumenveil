@@ -4,6 +4,31 @@ Most answers are in `CoAVolFog.log`, next to `Wow.exe`. It is written at every s
 client, which hooks it installed, which data files it read, and a summary every 60 seconds. When you open an issue,
 attach the log (remove your Windows user name from the paths if you like), and say what you see.
 
+## Antivirus warnings
+
+Some antivirus programs warn about Lumenveil's download; Microsoft Defender has called it
+`Trojan:Win32/Tecabans.STV!cl`. Detections like this judge a new file by its shape when nobody has reported on it yet.
+Lumenveil's `version.dll` is a DLL that `Wow.exe` loads from its own folder, as many graphics mods load (ReShade among
+them), and some malware loads that way too. Lumenveil's files are not code-signed, so nothing vouches for their
+publisher.
+
+Since 0.1.1, each file carries version information (product, description, version, licence, this project's address),
+the settings window no longer uses the Windows clipboard, and each release is built by GitHub Actions from the tagged
+source ([release.yml](../.github/workflows/release.yml)), with a record of the build that GitHub signs.
+
+To check a file you downloaded:
+
+- Compare its SHA-256 with `SHA256SUMS.txt` on the release page. In PowerShell: `Get-FileHash Lumenveil-0.1.1.zip`.
+- With the [GitHub CLI](https://cli.github.com/):
+  `gh attestation verify Lumenveil-0.1.1.zip --repo lumenveil/Lumenveil`. It shows that GitHub built the file from
+  this repository's source at that release's tag. It works for `version.dll`, `CoAVolFog.dll` and
+  `Lumenveil\lamp_extract.exe` from the zip too.
+- Or build Lumenveil yourself from the source: [BUILDING.md](BUILDING.md).
+
+If your antivirus still flags it, report the file to your antivirus vendor as a false positive (for Microsoft
+Defender: [submit a file for malware analysis](https://www.microsoft.com/en-us/wdsi/filesubmission)). If you are unsure,
+don't use the file. Don't turn your antivirus off for Lumenveil.
+
 ## Nothing changes in the game
 
 - **There is no `CoAVolFog.log`:** the game didn't load Lumenveil. Check that `version.dll` and `CoAVolFog.dll` are in

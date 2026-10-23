@@ -134,7 +134,8 @@ belongs to Blizzard Entertainment.
 
 ## Install
 
-1. Download the latest `Lumenveil-<version>.zip` from the [Releases](../../releases) page.
+1. Download the latest `Lumenveil-<version>.zip` from the [Releases](../../releases) page. If your antivirus warns
+   about it, see [Antivirus warnings](docs/TROUBLESHOOTING.md#antivirus-warnings) for how to check the files.
 2. Open the zip and drag everything in it into your game folder, the one that holds `Wow.exe`.
 3. Double-click **`Lumenveil-Setup.cmd`** once. It reads your own game files and writes where the world's lamps and
    water are (`lampdata.bin`, `liquiddata.bin`). This takes one to five minutes and is only needed once.

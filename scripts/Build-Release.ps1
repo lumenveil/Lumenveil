@@ -5,11 +5,12 @@
 
 .DESCRIPTION
   Configures and builds engine\ (CoAVolFog.dll, version.dll, the test harness) and engine\tools\lamp_extract (the
-  setup tool) for Win32 in Release, runs the test harness, and writes dist\Lumenveil-<version>.zip with
-  dist\SHA256SUMS.txt. See docs\BUILDING.md.
+  setup tool) for Win32 in Release, with the version written into each file's version information, runs the test
+  harness, and writes dist\Lumenveil-<version>.zip with dist\SHA256SUMS.txt. See docs\BUILDING.md.
 
 .PARAMETER Version
-  The version in the zip's name. Default: the first "## x.y.z" heading of CHANGELOG.md.
+  The version (major.minor.patch) in the zip's name and in each file's version information. Default: the first
+  "## x.y.z" heading of CHANGELOG.md.
 .PARAMETER SkipTests
   Don't run the test harness.
 .PARAMETER CpuTestsOnly
@@ -57,10 +58,11 @@ Write-Host "== Lumenveil $Version"
 if (-not (Test-Path (Join-Path $Root 'third_party\imgui\imgui.h'))) { throw 'third_party\imgui is missing.' }
 $imgui = (Join-Path $Root 'third_party\imgui').Replace('\', '/')
 $deps = (Join-Path $Root 'third_party').Replace('\', '/')
-Invoke-Step $cmake @('-S', (Join-Path $Root 'engine'), '-B', $engineBuild, '-A', 'Win32', "-DFETCHCONTENT_SOURCE_DIR_IMGUI=$imgui")
+Invoke-Step $cmake @('-S', (Join-Path $Root 'engine'), '-B', $engineBuild, '-A', 'Win32', "-DFETCHCONTENT_SOURCE_DIR_IMGUI=$imgui",
+                     "-DVF_VERSION=$Version")
 Invoke-Step $cmake @('--build', $engineBuild, '--config', 'Release', '--parallel')
 Invoke-Step $cmake @('-S', (Join-Path $Root 'engine\tools\lamp_extract'), '-B', $toolBuild, '-A', 'Win32',
-                     "-DLAMP_EXTRACT_DEPS=$deps")
+                     "-DLAMP_EXTRACT_DEPS=$deps", "-DVF_VERSION=$Version")
 Invoke-Step $cmake @('--build', $toolBuild, '--config', 'Release', '--parallel', '--target', 'lamp_extract')
 
 $bin = Join-Path $engineBuild 'Release'

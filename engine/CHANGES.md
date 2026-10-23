@@ -4,11 +4,13 @@ This engine is a modified version of CoAVolFog, released under the GNU General P
 the original (https://github.com/jealous-sound/coa-vfog).
 
 It is based on CoAVolFog's commit 4c1a956 of 2026-09-25. The Lumenveil authors changed it between 2026-09-26 and
-2026-10-16, in 153 changes, then cut out the tools used only to make the screenshots and tune the
+2026-10-23, in 154 changes, then cut out the tools used only to make the screenshots and tune the
 zones for this public release.
 
-## Files added (151)
+## Files added (153)
 
+- `cmake/version_info.rc.in`
+- `cmake/VersionResource.cmake`
 - `shaders/vf_client_shadow.hlsl`
 - `shaders/vf_clouds.hlsli`
 - `shaders/vf_edge_occluders.hlsl`

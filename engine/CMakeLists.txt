@@ -9,6 +9,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+option(VF_SYSTEM_CLIPBOARD "Let the settings window copy and paste through the Windows clipboard" OFF)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/VersionResource.cmake)
 set(VF_FOG_DATA ${CMAKE_CURRENT_SOURCE_DIR}/data/fogdata.bin)
 
 file(GLOB FXC_CANDIDATES "$ENV{ProgramFiles\(x86\)}/Windows Kits/10/bin/10.*/x86/fxc.exe")
@@ -143,6 +145,9 @@ target_compile_definitions(imgui
     PUBLIC IMGUI_DISABLE_DEMO_WINDOWS IMGUI_DISABLE_DEBUG_TOOLS
     PRIVATE IMGUI_IMPL_WIN32_DISABLE_GAMEPAD IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS
             IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS WIN32_LEAN_AND_MEAN NOMINMAX)
+if(NOT VF_SYSTEM_CLIPBOARD)
+    target_compile_definitions(imgui PRIVATE IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS)
+endif()
 
 add_library(CoAVolFog SHARED
     src/belt_lantern.cpp
@@ -194,10 +199,14 @@ target_include_directories(CoAVolFog PRIVATE src ${SHADER_OUT})
 target_compile_definitions(CoAVolFog PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS)
 target_compile_options(CoAVolFog PRIVATE /W4 /wd4100 /arch:SSE2 /fp:fast /GS)
 target_link_libraries(CoAVolFog PRIVATE kernel32 user32 imgui)
+vf_version_resource(CoAVolFog CoAVolFog.dll VFT_DLL
+    "Lumenveil renderer: fog, light and water effects drawn on the game's Direct3D 9 device")
 
 add_library(version SHARED proxy/version_proxy.cpp proxy/version.def)
 target_link_libraries(version PRIVATE CoAVolFog)
 target_compile_definitions(version PRIVATE WIN32_LEAN_AND_MEAN)
+vf_version_resource(version version.dll VFT_DLL
+    "Lumenveil loader: passes the Windows version API on to the system's version.dll and loads CoAVolFog.dll")
 
 add_executable(vfog_harness tests/harness.cpp src/belt_lantern.cpp src/cloud_noise.cpp src/config.cpp
     src/corpse_lights.cpp src/drift_noise.cpp src/effect_lights.cpp src/fog_data.cpp src/fog_model.cpp src/lamp_catalog.cpp
@@ -211,6 +220,8 @@ add_executable(vfog_harness tests/harness.cpp src/belt_lantern.cpp src/cloud_noi
 target_include_directories(vfog_harness PRIVATE src tools/lamp_extract ${SHADER_OUT})
 add_dependencies(vfog_harness vf_test_shaders)
 target_compile_definitions(vfog_harness PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS)
+target_compile_definitions(vfog_harness PRIVATE VF_VERSION_TEXT="${VF_VERSION}"
+    $<$<BOOL:${VF_SYSTEM_CLIPBOARD}>:VF_SYSTEM_CLIPBOARD>)
 target_link_libraries(vfog_harness PRIVATE CoAVolFog user32 ole32 windowscodecs)
 set(VF_POST_BUILD_FILES ${CMAKE_CURRENT_SOURCE_DIR}/CoAVolFog.ini)
 if(EXISTS ${VF_FOG_DATA})

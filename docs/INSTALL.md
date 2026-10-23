@@ -10,7 +10,8 @@
 
 ## Install
 
-1. Download `Lumenveil-<version>.zip` from the project's Releases page.
+1. Download `Lumenveil-<version>.zip` from the project's Releases page. If your antivirus warns about it, see
+   [Antivirus warnings](TROUBLESHOOTING.md#antivirus-warnings).
 2. Close the game.
 3. Open the zip and drag everything in it into your game folder, the one that holds `Wow.exe` and the `Data` folder.
    If Windows asks whether to replace files, a previous Lumenveil is there: say yes. Your `CoAVolFog.ini` is not
@@ -82,4 +83,5 @@ To switch Lumenveil off without removing it, set `Enable=0` in `CoAVolFog.ini`.
 The setup tool and the DLLs are not signed with a paid certificate, so Windows SmartScreen may say "Windows protected
 your PC" the first time: choose "More info" and "Run anyway" if you downloaded the zip from the project's Releases
 page. Some antivirus programs distrust any DLL that a game loads from its own folder; you can check the files against
-the checksums on the Releases page, or build them yourself ([BUILDING.md](BUILDING.md)).
+the checksums on the Releases page or against GitHub's signed record of the build, or build them yourself
+([TROUBLESHOOTING.md](TROUBLESHOOTING.md#antivirus-warnings), [BUILDING.md](BUILDING.md)).

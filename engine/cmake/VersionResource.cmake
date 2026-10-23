@@ -1,0 +1,17 @@
+enable_language(RC)
+
+set(VF_VERSION "0.0.0" CACHE STRING "Version written into the version resource of each program")
+if(NOT VF_VERSION MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)$")
+    message(FATAL_ERROR "VF_VERSION must read major.minor.patch, not ${VF_VERSION}")
+endif()
+set(VF_VERSION_NUMBERS "${CMAKE_MATCH_1},${CMAKE_MATCH_2},${CMAKE_MATCH_3},0")
+set(VF_VERSION_TEMPLATE ${CMAKE_CURRENT_LIST_DIR}/version_info.rc.in)
+
+function(vf_version_resource target file_name file_type description)
+    set(VF_FILE_NAME ${file_name})
+    set(VF_FILE_TYPE ${file_type})
+    set(VF_FILE_DESCRIPTION "${description}")
+    set(rc ${CMAKE_CURRENT_BINARY_DIR}/${target}_version.rc)
+    configure_file(${VF_VERSION_TEMPLATE} ${rc} @ONLY)
+    target_sources(${target} PRIVATE ${rc})
+endfunction()

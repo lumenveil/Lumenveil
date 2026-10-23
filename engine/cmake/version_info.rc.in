@@ -1,0 +1,31 @@
+#include <winver.h>
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION @VF_VERSION_NUMBERS@
+PRODUCTVERSION @VF_VERSION_NUMBERS@
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0x0L
+FILEOS VOS_NT_WINDOWS32
+FILETYPE @VF_FILE_TYPE@
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "Lumenveil"
+            VALUE "FileDescription", "@VF_FILE_DESCRIPTION@"
+            VALUE "FileVersion", "@VF_VERSION@"
+            VALUE "InternalName", "@VF_FILE_NAME@"
+            VALUE "LegalCopyright", "The Lumenveil and CoAVolFog authors. Free software under the GNU GPL v2."
+            VALUE "OriginalFilename", "@VF_FILE_NAME@"
+            VALUE "ProductName", "Lumenveil"
+            VALUE "ProductVersion", "@VF_VERSION@"
+            VALUE "Comments", "Open source: https://github.com/lumenveil/Lumenveil"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

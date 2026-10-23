@@ -19,6 +19,12 @@ WHEN SOMETHING GOES WRONG
   Look in CoAVolFog.log next to Wow.exe. The full documentation, the source code and the issue tracker are on the
   project's page; see the link on the page you downloaded this from.
 
+ANTIVIRUS
+  Some antivirus programs warn about new DLLs that a game loads from its own folder, as it loads version.dll. To
+  check the files, compare them with SHA256SUMS.txt on the release page, or run
+  "gh attestation verify <file> --repo lumenveil/Lumenveil" with the GitHub CLI: it shows that GitHub built the file
+  from the project's source. Report a false positive to your antivirus vendor; don't turn your antivirus off.
+
 LEGAL
   Lumenveil is free, non-commercial software under the GNU General Public License v2 (LICENSE.txt). It contains no
   game files and no part of the game's code, changes none of your game files, sends nothing over the network and

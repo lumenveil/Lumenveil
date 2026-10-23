@@ -72,6 +72,7 @@
 #include "vs_test_terrain_receiver.h"
 
 #include <windows.h>
+#include <winver.h>
 #include <d3d9.h>
 #include <wincodec.h>
 
@@ -29247,6 +29248,104 @@ void CheckClientCode()
           "shorter span fails");
 }
 
+bool ModuleImports(HMODULE module, const char* library, const char* function)
+{
+    const unsigned char* base = reinterpret_cast<const unsigned char*>(module);
+    const IMAGE_NT_HEADERS* nt =
+        reinterpret_cast<const IMAGE_NT_HEADERS*>(base + reinterpret_cast<const IMAGE_DOS_HEADER*>(base)->e_lfanew);
+    const IMAGE_DATA_DIRECTORY& imports = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+    if (!imports.VirtualAddress)
+        return false;
+    for (const IMAGE_IMPORT_DESCRIPTOR* entry =
+             reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>(base + imports.VirtualAddress);
+         entry->Name; ++entry)
+    {
+        if (_stricmp(reinterpret_cast<const char*>(base + entry->Name), library) != 0)
+            continue;
+        const DWORD names = entry->OriginalFirstThunk ? entry->OriginalFirstThunk : entry->FirstThunk;
+        for (const IMAGE_THUNK_DATA* thunk = reinterpret_cast<const IMAGE_THUNK_DATA*>(base + names);
+             thunk->u1.AddressOfData; ++thunk)
+        {
+            if (IMAGE_SNAP_BY_ORDINAL(thunk->u1.Ordinal))
+                continue;
+            const IMAGE_IMPORT_BY_NAME* byName =
+                reinterpret_cast<const IMAGE_IMPORT_BY_NAME*>(base + thunk->u1.AddressOfData);
+            if (std::strcmp(reinterpret_cast<const char*>(byName->Name), function) == 0)
+                return true;
+        }
+    }
+    return false;
+}
+
+std::wstring VersionResource(const std::wstring& path)
+{
+    HMODULE module = LoadLibraryExW(path.c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+    if (!module)
+        return L"";
+    std::wstring resource;
+    HRSRC found = FindResourceW(module, MAKEINTRESOURCEW(VS_VERSION_INFO), MAKEINTRESOURCEW(16));
+    HGLOBAL loaded = found ? LoadResource(module, found) : nullptr;
+    const void* data = loaded ? LockResource(loaded) : nullptr;
+    if (data)
+        resource.assign(static_cast<const wchar_t*>(data), SizeofResource(module, found) / sizeof(wchar_t));
+    FreeLibrary(module);
+    return resource;
+}
+
+bool VersionResourceNames(const std::wstring& resource, const std::wstring& file, DWORD type, unsigned major,
+                          unsigned minor, unsigned patch)
+{
+    const unsigned char* bytes = reinterpret_cast<const unsigned char*>(resource.data());
+    const size_t size = resource.size() * sizeof(wchar_t);
+    const VS_FIXEDFILEINFO* fixed = nullptr;
+    for (size_t at = 0; !fixed && at + sizeof(VS_FIXEDFILEINFO) <= size; at += 4)
+    {
+        const VS_FIXEDFILEINFO* candidate = reinterpret_cast<const VS_FIXEDFILEINFO*>(bytes + at);
+        if (candidate->dwSignature == VS_FFI_SIGNATURE)
+            fixed = candidate;
+    }
+    const std::string text = VF_VERSION_TEXT;
+    const std::wstring version(text.begin(), text.end());
+    return fixed && fixed->dwFileType == type && fixed->dwFileVersionMS == ((major << 16) | minor) &&
+           fixed->dwFileVersionLS == (patch << 16) && resource.find(L"Lumenveil") != std::wstring::npos &&
+           resource.find(file) != std::wstring::npos && resource.find(version) != std::wstring::npos;
+}
+
+void CheckBinaryIdentity()
+{
+    HMODULE dll = GetModuleHandleW(L"CoAVolFog.dll");
+    wchar_t path[MAX_PATH] = {};
+    GetModuleFileNameW(dll, path, MAX_PATH);
+    std::wstring folder = path;
+    folder.resize(folder.find_last_of(L'\\') + 1);
+    unsigned major = 0;
+    unsigned minor = 0;
+    unsigned patch = 0;
+    const bool parsed = std::sscanf(VF_VERSION_TEXT, "%u.%u.%u", &major, &minor, &patch) == 3;
+    Check(parsed && VersionResourceNames(VersionResource(folder + L"CoAVolFog.dll"), L"CoAVolFog.dll", VFT_DLL, major,
+                                         minor, patch),
+          "binaries: CoAVolFog.dll carries a version resource naming Lumenveil, its file name and the build's version");
+    if (FileThere(NarrowPath(folder + L"version.dll")))
+        Check(parsed && VersionResourceNames(VersionResource(folder + L"version.dll"), L"version.dll", VFT_DLL, major,
+                                             minor, patch),
+              "binaries: version.dll carries a version resource naming Lumenveil, its file name and the build's "
+              "version");
+    else
+        Skip("binaries: version.dll's version resource (no version.dll next to the harness)");
+
+    const bool walked = ModuleImports(dll, "USER32.dll", "GetKeyState");
+    bool clipboard = false;
+    for (const char* function : {"OpenClipboard", "GetClipboardData", "SetClipboardData", "EmptyClipboard"})
+        clipboard = clipboard || ModuleImports(dll, "USER32.dll", function);
+#if defined(VF_SYSTEM_CLIPBOARD)
+    Check(walked && clipboard, "binaries: a build with VF_SYSTEM_CLIPBOARD imports the Windows clipboard functions");
+#else
+    Check(walked && !clipboard,
+          "binaries: CoAVolFog.dll imports none of the Windows clipboard functions (the import walk finds user32's "
+          "GetKeyState)");
+#endif
+}
+
 void CheckZoneAtlas()
 {
     const std::string text = "# zones\r\n"
@@ -32991,6 +33090,7 @@ int Run(const std::wstring& outDir, const std::string& dataPath, const std::wstr
     CheckWeatherOverride();
     CheckFarClipRefresh();
     CheckClientCode();
+    CheckBinaryIdentity();
     CheckZoneAtlas();
     CheckShippedZoneList(dataPath);
     CheckRegionSlotChoice();

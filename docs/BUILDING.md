@@ -27,11 +27,11 @@ writes `dist\Lumenveil-<version>.zip` with `SHA256SUMS.txt` beside it. The versi
 ## Build by hand
 
 ```powershell
-cmake -S engine -B build\engine -A Win32 -DFETCHCONTENT_SOURCE_DIR_IMGUI="$PWD/third_party/imgui"
+cmake -S engine -B build\engine -A Win32 -DFETCHCONTENT_SOURCE_DIR_IMGUI="$PWD/third_party/imgui" "-DVF_VERSION=0.1.1"
 cmake --build build\engine --config Release
 ctest --test-dir build\engine -C Release --output-on-failure
 
-cmake -S engine\tools\lamp_extract -B build\lamp_extract -A Win32 -DLAMP_EXTRACT_DEPS="$PWD/third_party"
+cmake -S engine\tools\lamp_extract -B build\lamp_extract -A Win32 -DLAMP_EXTRACT_DEPS="$PWD/third_party" "-DVF_VERSION=0.1.1"
 cmake --build build\lamp_extract --config Release
 ```
 
@@ -41,6 +41,8 @@ The DLLs are `build\engine\Release\version.dll` and `CoAVolFog.dll`; the setup t
 - `FETCHCONTENT_SOURCE_DIR_IMGUI` points the engine at the Dear ImGui sources in `third_party/imgui`. Without it,
   CMake downloads the same version from Dear ImGui's releases and checks it by hash.
 - `LAMP_EXTRACT_DEPS` is the folder holding the `libmpq`, `zlib` and `bzip2` sources.
+- `VF_VERSION` is the version written into each file's version information. In PowerShell, quote the whole argument:
+  unquoted, `-DVF_VERSION=0.1.1` reaches CMake split at the first dot.
 
 ## The test harness
 
@@ -60,6 +62,15 @@ To run it on DXVK, copy DXVK's 32-bit `d3d9.dll` next to `vfog_harness.exe`.
 |---|---|---|
 | `FXC` | newest in the Windows SDK | Path of `fxc.exe` |
 | `FETCHCONTENT_SOURCE_DIR_IMGUI` | (download) | Folder of the Dear ImGui sources; the release script sets `third_party/imgui` |
+| `VF_VERSION` | `0.0.0` | Version (major.minor.patch) written into the version information of `version.dll`, `CoAVolFog.dll` and `lamp_extract.exe`; the release script sets it |
+| `VF_SYSTEM_CLIPBOARD` | `OFF` | Lets the settings window copy and paste through the Windows clipboard. Off, it copies and pastes within itself and the DLL doesn't use the clipboard functions; the harness checks which |
+
+## Releases
+
+A tag `v<version>` runs [.github/workflows/release.yml](../.github/workflows/release.yml) on GitHub's servers: it
+checks that the tag matches the top entry of `CHANGELOG.md`, runs `Build-Release.ps1 -CpuTestsOnly` and the comment
+check, has GitHub sign a provenance record of the zip and of each program in it, and publishes the release with
+`SHA256SUMS.txt`. `gh attestation verify <file> --repo lumenveil/Lumenveil` checks a file against that record.
 
 ## Code rules
 
